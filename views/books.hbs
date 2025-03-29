@@ -1,0 +1,25 @@
+<div class="navbar bg-base-200">
+  <a hx-boost="true" href="/" class="btn btn-ghost text-xl"> &lt;- Home</a>
+</div>
+<div class="hero bg-base-200 min-h-screen">
+  <div class="hero-content text-center flex-col">
+    <div class="max-w-md">
+      <h1 class="text-3xl opacity-70 font-bold">Books.</h1>
+      <p class="p-4 pb-2 text-xs opacity-60 tracking-wide">
+        What would you like to read?
+      </p>
+      <ul class="list bg-base-100 rounded-box shadow-md">
+        {{>bookPartial}}
+
+      </ul>
+    </div>
+    <fieldset class="fieldset">
+  <legend class="fieldset-legend">Add Book</legend>
+  <input hx-post="/books" {{!--  hx-on::after-request="this.value = ''"--}}
+   hx-push-url="true" hx-trigger="keyup[key=='Enter']" 
+   type="text" class="input" autofocus 
+   placeholder="Add your books" name="book" value=""/> 
+  <p class="fieldset-label">You can add by title.</p>
+</fieldset>
+  </div>
+</div>

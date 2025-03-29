@@ -1,0 +1,29 @@
+{{#each books}}
+  <li class="list-row">
+    <div
+      class="text-4xl font-thin opacity-30 tabular-nums"
+      style="font-family: sans-serif;"
+    >{{this.id}}</div>
+    <div><img class="size-10 rounded-box" src="{{this.photo}}" /></div>
+    <div class="list-col-grow">
+      <div>{{this.author}}</div>
+      <div
+        class="text-xs uppercase font-semibold opacity-60"
+      >{{this.title}}</div>
+    </div>
+    <div class="join">
+
+      <button class="btn btn-ghost btn-sm join-item">
+        ✎
+      </button>
+      <button
+        hx-swap="outerHTML"
+        hx-target="closest li"
+        hx-delete="/books/{{this.id}}"
+        class="btn btn-ghost btn-sm join-item"
+      >
+        ✗
+      </button>
+    </div>
+  </li>
+{{/each}}
