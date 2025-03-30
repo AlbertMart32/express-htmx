@@ -4,16 +4,20 @@
       class="text-4xl font-thin opacity-30 tabular-nums"
       style="font-family: sans-serif;"
     >{{this.id}}</div>
-    <div><img class="size-10 rounded-box" src="{{this.photo}}" /></div>
+    <h2 style="font-size: 2rem;">🕮</h2>
     <div class="list-col-grow">
-      <div>{{this.author}}</div>
+      <div class="capitalize">{{this.author}}</div>
       <div
         class="text-xs uppercase font-semibold opacity-60"
       >{{this.title}}</div>
     </div>
     <div class="join">
 
-      <button class="btn btn-ghost btn-sm join-item">
+      <button
+        hx-put="/books/{{this.id}}"
+        hx-target="next input"
+        class="btn btn-ghost btn-sm join-item"
+      >
         ✎
       </button>
       <button

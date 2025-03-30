@@ -8,7 +8,7 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const port = process.env.PORT;
+const port = process.env.PORT || 3000;
 
 // template engine setup
 const hbs = create({
@@ -30,10 +30,11 @@ app.use(express.json());
 
 // routes
 app.get("/", (req, res) => {
-  res.render("home", {
-    showHeader: false,
-    showFooter: true,
-  });
+  res.redirect("/books");
+  // res.render("home", {
+  //   showHeader: false,
+  //   showFooter: true,
+  // });
 });
 
 app.get("/books", (req, res) => {
@@ -44,19 +45,15 @@ app.get("/books", (req, res) => {
   });
 });
 app.post("/books", (req, res) => {
-  let book = req.body.book;
-  console.log(book);
-  let author = req.body.author || "Unkown Author";
+  let title = req.body.title;
+  let author = req.body.author;
   let id = data.length + 1;
-  let photo =
-    req.body.photo || "https://cdn-icons-png.flaticon.com/512/8832/8832880.png";
 
-  if (book && book.trim() !== "") {
+  if (title && title.trim() !== "" && author && author.trim() !== "") {
     let newBook = {
       id,
-      title: book,
+      title,
       author,
-      photo,
     };
     data.push(newBook);
   }
@@ -64,16 +61,15 @@ app.post("/books", (req, res) => {
   res.send();
 });
 
-// app.put("/books/:id", (req, res) => {
-//   const id = req.params.id;
-//   console.log(id);
-//   const book = data.find((book) => book.id == id);
-//   console.log(book.author);
-//   res.render("books", {
-//     book,
-//   });
-//   //how to update the book title and author
-// });
+app.put("/books/:id", (req, res) => {
+  const id = req.params.id;
+  const author = req.body.author;
+  const title = req.body.title;
+  const bookIndex = data.findIndex((book) => book.id == id);
+  data[bookIndex] = { id, title, author };
+
+  res.redirect("/books");
+});
 
 app.delete("/books/:id", (req, res) => {
   const id = req.params.id;

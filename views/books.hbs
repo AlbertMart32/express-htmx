@@ -13,13 +13,18 @@
 
       </ul>
     </div>
-    <fieldset class="fieldset">
-  <legend class="fieldset-legend">Add Book</legend>
-  <input hx-post="/books" {{!--  hx-on::after-request="this.value = ''"--}}
-   hx-push-url="true" hx-trigger="keyup[key=='Enter']" 
-   type="text" class="input" autofocus 
-   placeholder="Add your books" name="book" value=""/> 
-  <p class="fieldset-label">You can add by title.</p>
-</fieldset>
+    <form hx-post="/books" >
+      <fieldset class="fieldset">
+        <input 
+        type="text" class="input" autofocus 
+        placeholder="Author" name="author" value=""/> 
+      
+        <input 
+        type="text" class="input"  
+        placeholder="Title" name="title" value=""/> 
+        <button type="submit" class="btn">Add Book</button>
+      </fieldset>
+      
+    </form>
   </div>
 </div>
