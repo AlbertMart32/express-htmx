@@ -1,6 +1,7 @@
 import express from "express";
 import { create } from "express-handlebars";
 import path from "path";
+
 import { fileURLToPath } from "url";
 import data from "./data/data.js";
 const app = express();
@@ -13,6 +14,9 @@ const port = process.env.PORT || 3000;
 // template engine setup
 const hbs = create({
   extname: ".hbs",
+  helpers: {
+    ternary: (condition, value1, value2) => (condition ? value1 : value2),
+  },
 });
 app.engine("hbs", hbs.engine);
 app.set("view engine", "hbs");
@@ -62,16 +66,26 @@ app.post("/books", (req, res) => {
 
 app.put("/books/:id", (req, res) => {
   const id = req.params.id;
-  const author = req.body.author;
-  const title = req.body.title;
-  const bookIndex = data.findIndex((book) => book.id == id);
-  data[bookIndex] = { id, title, author };
 
-  res.render("/partials/inputEdit", {
-    book: data,
-    showHeader: false,
-    showFooter: true,
-  });
+  const bookIndex = data.findIndex((book) => book.id == id);
+
+  console.log(id);
+  console.log(data[bookIndex]);
+  res.send(/*html*/ `
+    <form hx-post="/books" >
+      <fieldset class="fieldset">
+        <input 
+        type="text" class="input" autofocus 
+        placeholder="Author" name="author" value="${data[bookIndex].author}"/> 
+      
+        <input 
+        type="text" class="input"  
+        placeholder="Title" name="title" value="${data[bookIndex].title}"/> 
+        <button type="submit" class="btn">Edit Book</button>
+      </fieldset>
+      
+    </form>
+  `);
 });
 
 app.delete("/books/:id", (req, res) => {
