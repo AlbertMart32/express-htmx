@@ -28,13 +28,12 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// routes
+// ======================routes ======================
 app.get("/", (req, res) => {
-  res.redirect("/books");
-  // res.render("home", {
-  //   showHeader: false,
-  //   showFooter: true,
-  // });
+  res.render("home", {
+    showHeader: false,
+    showFooter: true,
+  });
 });
 
 app.get("/books", (req, res) => {
@@ -68,7 +67,11 @@ app.put("/books/:id", (req, res) => {
   const bookIndex = data.findIndex((book) => book.id == id);
   data[bookIndex] = { id, title, author };
 
-  res.redirect("/books");
+  res.render("/partials/inputEdit", {
+    book: data,
+    showHeader: false,
+    showFooter: true,
+  });
 });
 
 app.delete("/books/:id", (req, res) => {
