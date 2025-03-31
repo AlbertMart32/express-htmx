@@ -64,15 +64,13 @@ app.post("/books", (req, res) => {
   res.send();
 });
 
-app.put("/books/:id", (req, res) => {
+app.get("/books/:id", (req, res) => {
   const id = req.params.id;
 
   const bookIndex = data.findIndex((book) => book.id == id);
 
-  console.log(id);
-  console.log(data[bookIndex]);
   res.send(/*html*/ `
-    <form hx-post="/books" >
+    <form hx-put="/books/${id}/edit" >
       <fieldset class="fieldset">
         <input 
         type="text" class="input" autofocus 
@@ -85,7 +83,23 @@ app.put("/books/:id", (req, res) => {
       </fieldset>
       
     </form>
+    
   `);
+});
+
+app.put("/books/:id/edit", (req, res) => {
+  const id = req.params.id;
+  let title = req.body.title;
+  let author = req.body.author;
+
+  if (title && title.trim() !== "" && author && author.trim() !== "") {
+    const bookIndex = data.findIndex((book) => book.id == id);
+    data[bookIndex].id = id;
+    data[bookIndex].title = title;
+    data[bookIndex].author = author;
+  }
+  res.setHeader("HX-Location", "/books");
+  res.send();
 });
 
 app.delete("/books/:id", (req, res) => {
@@ -96,7 +110,7 @@ app.delete("/books/:id", (req, res) => {
   res.send();
 });
 
-// server setup
+// ===================== server setup  ====================
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
