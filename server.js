@@ -37,7 +37,7 @@ app.use(express.json());
 app.get("/", (req, res) => {
   res.render("home", {
     showHeader: false,
-    showFooter: true,
+    showFooter: false,
   });
 });
 
