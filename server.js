@@ -4,6 +4,7 @@ import path from "path";
 
 import { fileURLToPath } from "url";
 import data from "./data/data.js";
+import formHtmx from "./views/formHtmx.js";
 const app = express();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -68,23 +69,8 @@ app.get("/books/:id", (req, res) => {
   const id = req.params.id;
 
   const bookIndex = data.findIndex((book) => book.id == id);
-
-  res.send(/*html*/ `
-    <form hx-put="/books/${id}/edit" >
-      <fieldset class="fieldset">
-        <input 
-        type="text" class="input" autofocus 
-        placeholder="Author" name="author" value="${data[bookIndex].author}"/> 
-      
-        <input 
-        type="text" class="input"  
-        placeholder="Title" name="title" value="${data[bookIndex].title}"/> 
-        <button type="submit" class="btn">Edit Book</button>
-      </fieldset>
-      
-    </form>
-    
-  `);
+  const book = data[bookIndex];
+  res.send(formHtmx(book));
 });
 
 app.put("/books/:id/edit", (req, res) => {
