@@ -9,6 +9,7 @@
         What would you like to read?
       </p>
       <ul class="list bg-base-100 rounded-box shadow-md">
+
         {{>bookPartial}}
 
       </ul>
@@ -16,13 +17,13 @@
     <form hx-post="/books" >
       <fieldset class="fieldset">
         <input 
-        type="text" class="input" autofocus 
+        type="text" class="input"  
         placeholder="Author" name="author" value=""> 
       
         <input 
         type="text" class="input"  
         placeholder="Title" name="title" value=""> 
-        <button type="submit" class="btn" hx-vals = '{"method":"post"}'>Add Book</button>
+        <button type="submit" class="btn" >Add Book</button>
       </fieldset>
       
     </form>

@@ -13,13 +13,14 @@
     </div>
     <div class="join">
 
-      <button
+      <a
+        hx-push-url="true"
         hx-get="/books/{{this.id}}"
         hx-target="next form"
         class="btn btn-ghost btn-sm join-item"
       >
         ✎
-      </button>
+      </a>
       <button
         hx-swap="outerHTML"
         hx-target="closest li"
