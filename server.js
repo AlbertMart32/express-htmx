@@ -1,10 +1,10 @@
 import express from "express";
 import { create } from "express-handlebars";
 import path from "path";
-
-import { fileURLToPath } from "url";
-import data from "./data/data.js";
+import { db } from "./data/database.js";
 import formHtmx from "./views/formHtmx.js";
+import { fileURLToPath } from "url";
+
 const app = express();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -42,35 +42,55 @@ app.get("/", (req, res) => {
 });
 
 app.get("/books", (req, res) => {
-  res.render("books", {
-    showHeader: false,
-    showFooter: true,
-    books: data,
+  let books = [];
+  const sql = `SELECT * FROM books`;
+  db.all(sql, [], (err, rows) => {
+    try {
+      if (err) throw err;
+    } catch (err) {
+      console.error("Error fetching books:", err.message);
+      res.status(500).send("Internal Server Error");
+    }
+    books = rows;
+    res.render("books", {
+      showHeader: false,
+      showFooter: true,
+      books: books.length > 0 ? books : null, // Pass null or an empty array if no books found,
+    });
   });
 });
 app.post("/books", (req, res) => {
   let title = req.body.title;
   let author = req.body.author;
-  let id = data.length + 1;
 
   if (title && title.trim() !== "" && author && author.trim() !== "") {
-    let newBook = {
-      id,
-      title,
-      author,
-    };
-    data.push(newBook);
+    const insertQuery = `INSERT INTO books (title, author) VALUES (?, ?)`;
+    db.run(insertQuery, [title, author], (err) => {
+      if (err) {
+        console.error("Error adding book:", err.message);
+        return;
+      }
+      console.log(`Book added successfully: ${title} by ${author}`);
+      res.setHeader("HX-Location", "/books");
+      res.send();
+    });
   }
-  res.setHeader("HX-Location", "/books");
-  res.send();
 });
 
 app.get("/books/:id", (req, res) => {
   const id = req.params.id;
+  const sql = `SELECT * FROM books WHERE id = ?`;
+  db.get(sql, [id], (err, row) => {
+    if (err) {
+      console.error("Error fetching book:", err.message);
+      return res.status(500).send("Internal Server Error");
+    }
+    if (!row) {
+      return res.status(404).send("Book not found");
+    }
 
-  const bookIndex = data.findIndex((book) => book.id == id);
-  const book = data[bookIndex];
-  res.send(formHtmx(book));
+    res.send(formHtmx(row));
+  });
 });
 
 app.put("/books/:id/edit", (req, res) => {
@@ -79,24 +99,50 @@ app.put("/books/:id/edit", (req, res) => {
   let author = req.body.author;
 
   if (title && title.trim() !== "" && author && author.trim() !== "") {
-    const bookIndex = data.findIndex((book) => book.id == id);
-    data[bookIndex].id = id;
-    data[bookIndex].title = title;
-    data[bookIndex].author = author;
+    const sql = `UPDATE books SET title = ?, author = ? WHERE id = ?`;
+    db.run(sql, [title, author, id], function (err) {
+      if (err) {
+        console.error("Error updating book:", err.message);
+        return res.status(500).send("Internal Server Error");
+      }
+      if (this.changes === 0) {
+        return res.status(404).send("Book not found");
+      }
+      console.log(`Book with id ${id} updated`);
+      res.setHeader("HX-Location", "/books");
+      res.send();
+    });
   }
-  res.setHeader("HX-Location", "/books");
-  res.send();
 });
 
 app.delete("/books/:id", (req, res) => {
   const id = req.params.id;
-  const book = data.find((book) => book.id === id);
-  const index = data.indexOf(book);
-  data.splice(index, 1);
-  res.send();
+
+  const sql = `DELETE FROM books WHERE id = ?`;
+  db.run(sql, [id], (err) => {
+    if (err) {
+      console.error("Error deleting book:", err.message);
+      return res.status(500).send("Internal Server Error");
+    }
+    console.log(`Book with id ${id} deleted`);
+
+    res.send();
+  });
 });
 
 // ===================== server setup  ====================
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
+});
+
+// Close the database connection on application shutdown
+process.on("SIGINT", () => {
+  db.close((err) => {
+    if (err) {
+      console.error("Error closing the database:", err.message);
+    } else {
+      console.log("Database connection closed.");
+    }
+    process.exit(0); // Exit the process
+  });
 });
