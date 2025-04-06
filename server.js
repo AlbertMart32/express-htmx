@@ -130,6 +130,27 @@ app.delete("/books/:id", (req, res) => {
   });
 });
 
+//======================== Search books====================
+
+app.post("/books/search", (req, res) => {
+  const searchTerm = req.body.search.toLowerCase();
+  const sql = `SELECT * FROM books`;
+  db.all(sql, [], (err, rows) => {
+    if (err) {
+      console.error("Error fetching books:", err.message);
+      return res.status(500).send("Internal Server Error");
+    }
+    const filteredBooks = rows.filter((book) => {
+      return book.title.toLowerCase().includes(searchTerm);
+    });
+    res.render("books", {
+      showHeader: false,
+      showFooter: true,
+      books: filteredBooks.length > 0 ? filteredBooks : null,
+    });
+  });
+});
+
 // ===================== server setup  ====================
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

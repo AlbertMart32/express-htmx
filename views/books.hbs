@@ -8,7 +8,20 @@
       <p class="p-4 pb-2 text-xs opacity-60 tracking-wide">
         What would you like to read?
       </p>
-      <ul class="list bg-base-100 rounded-box shadow-md">
+      <div class=" hero-content">
+        <fieldset class="fieldset">
+
+        <input 
+        hx-post="/books/search"
+        hx-trigger="keyup changed delay:150ms"
+        hx-target="next ul"
+         hx-select="#book-list"
+
+          type="search" class="input"  
+          placeholder="Search..." name="search" value=""> 
+        </fieldset>
+      </div>
+      <ul id="book-list" class="list bg-base-100 rounded-box shadow-md">
 
         {{>bookPartial}}
 
