@@ -118,8 +118,11 @@ app.put("/books/:id/edit", async (req, res) => {
 
 app.delete("/books/:id", async (req, res) => {
   const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).send("Invalid book ID");
+  }
   try {
-    const result = await sql`DELETE FROM books WHERE id = $1`;
+    const result = await sql`DELETE FROM books WHERE id = ${id}`;
     if (result.rowCount === 0) {
       return res.status(404).send("Book not found");
     }
