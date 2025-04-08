@@ -44,19 +44,17 @@ app.get("/", (req, res) => {
 
 app.get("/books", async (req, res) => {
   let books = [];
-try {
-  
-  books = await sql`SELECT * FROM books`;
-  console.log(books);
-  res.render("books", {
-    showHeader: false,
-    showFooter: true,
-    books: books.length > 0 ? books : null, // Pass null or an empty array if no books found,
-  });
-} catch (error) {
-  console.error("Error fetching books:", error);
-}
-
+  try {
+    books = await sql`SELECT * FROM books`;
+    // console.log(books);
+    res.render("books", {
+      showHeader: false,
+      showFooter: true,
+      books: books.length > 0 ? books : null, // Pass null or an empty array if no books found,
+    });
+  } catch (error) {
+    console.error("Error fetching books:", error);
+  }
 });
 
 app.post("/books", async (req, res) => {
@@ -65,9 +63,9 @@ app.post("/books", async (req, res) => {
 
   if (title && title.trim() !== "" && author && author.trim() !== "") {
     try {
+      const result =
+        await sql`INSERT INTO books (title, author) VALUES (${title}, ${author}) RETURNING *`;
 
-      const result = await sql`INSERT INTO books (title, author) VALUES (${title}, ${author}) RETURNING *`;
-      
       console.log(
         `Book added successfully: ${result[0].title} by ${result[0].author}`
       );
@@ -75,7 +73,7 @@ app.post("/books", async (req, res) => {
       res.send();
     } catch (error) {
       console.error("Error adding book:", error);
-       res.status(500).send("Error adding book");
+      res.status(500).send("Error adding book");
     }
   }
 });
@@ -83,7 +81,6 @@ app.post("/books", async (req, res) => {
 app.get("/books/:id", async (req, res) => {
   const id = parseInt(req.params.id);
   try {
-
     const [row] = await sql`SELECT * FROM books WHERE id = ${id}`;
     res.send(formHtmx(row));
   } catch (error) {
@@ -96,33 +93,42 @@ app.put("/books/:id/edit", async (req, res) => {
   const id = parseInt(req.params.id);
   let title = req.body.title;
   let author = req.body.author;
-
+  console.log("title", title);
+  console.log("author", author);
   if (title && title.trim() !== "" && author && author.trim() !== "") {
-    const result = await sql`UPDATE books SET title = $1, author = $2 WHERE id = $3 RETURNING *`;
-    console.log(result);
-    if (result.length === 0) {
-      return res.status(404).send("Book not found");
+    try {
+      const result = await sql`
+        UPDATE books 
+        SET title = ${title}, author = ${author} 
+        WHERE id = ${id} 
+        RETURNING *`;
+      console.log(result);
+      if (result.length === 0) {
+        return res.status(404).send("Book not found");
+      }
+      console.log(`Book with id ${id} updated`);
+      res.setHeader("HX-Location", "/books");
+      res.send();
+    } catch (error) {
+      console.error("Error updating book:", error);
+      res.status(500).send("Error updating book");
     }
-    console.log(`Book with id ${id} updated`);
-    res.setHeader("HX-Location", "/books");
-    res.send();
   }
 });
 
 app.delete("/books/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-try{
-
-  const result = await sql`DELETE FROM books WHERE id = $1`;
-  if (result.rowCount === 0) {
-    return res.status(404).send("Book not found");
+  try {
+    const result = await sql`DELETE FROM books WHERE id = $1`;
+    if (result.rowCount === 0) {
+      return res.status(404).send("Book not found");
+    }
+    console.log(`Book with id ${id} deleted`);
+    res.send();
+  } catch (error) {
+    console.error("Error deleting book:", error);
+    res.status(500).send("Error deleting book");
   }
-  console.log(`Book with id ${id} deleted`);
-  res.send();
-}catch (error) {
-  console.error("Error deleting book:", error);
-  res.status(500).send("Error deleting book");
-}
 });
 
 //======================== Search books====================
@@ -141,33 +147,26 @@ app.post("/books/search", async (req, res) => {
     });
   }
   // If not in cache, query the database
-try{
+  try {
+    const result = await sql`SELECT * FROM books`;
+    const filteredBooks = result.filter((book) => {
+      return book.title.toLowerCase().includes(searchTerm);
+    });
+    // Store the result in the cache
+    searchCache[searchTerm] = filteredBooks;
 
-  const result = await sql`SELECT * FROM books`;
-  const filteredBooks = result.filter((book) => {
-    return book.title.toLowerCase().includes(searchTerm);
-  });
-  // Store the result in the cache
-  searchCache[searchTerm] = filteredBooks;
-
-  res.render("books", {
-    showHeader: false,
-    showFooter: true,
-    books: filteredBooks.length > 0 ? filteredBooks : null,
-  });
-
-}catch (error) {
-  console.error("Error fetching books:", error);
-  res.status(500).send("Error fetching books");
-}
-
-
- 
+    res.render("books", {
+      showHeader: false,
+      showFooter: true,
+      books: filteredBooks.length > 0 ? filteredBooks : null,
+    });
+  } catch (error) {
+    console.error("Error fetching books:", error);
+    res.status(500).send("Error fetching books");
+  }
 });
 
 // ===================== server setup  ====================
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
-
-
