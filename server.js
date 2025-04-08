@@ -47,15 +47,16 @@ app.get("/books", async (req, res) => {
 try {
   
   books = await sql`SELECT * FROM books`;
-} catch (error) {
-  console.error("Error fetching books:", error);
-}
-
+  console.log(books);
   res.render("books", {
     showHeader: false,
     showFooter: true,
     books: books.length > 0 ? books : null, // Pass null or an empty array if no books found,
   });
+} catch (error) {
+  console.error("Error fetching books:", error);
+}
+
 });
 
 app.post("/books", async (req, res) => {

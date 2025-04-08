@@ -8,12 +8,5 @@ if(!process.env.DATABASE_URL){
 const sql = neon(
   process.env.DATABASE_URL
 );
-async function createTable() {
-  await sql`CREATE TABLE IF NOT EXISTS books (
-    id SERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    author VARCHAR(255) NOT NULL
-  )`;
-}
-createTable()
+
 export default sql;
