@@ -1,7 +1,8 @@
+// import { db } from "./data/database.js";
 import express from "express";
 import { create } from "express-handlebars";
 import path from "path";
-import { db } from "./data/database.js";
+import sql from "./data/databaseNeon.js";
 import formHtmx from "./views/formHtmx.js";
 import { fileURLToPath } from "url";
 
@@ -33,7 +34,7 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// ======================routes ======================
+// ====================== ROUTES ======================
 app.get("/", (req, res) => {
   res.render("home", {
     showHeader: false,
@@ -41,113 +42,102 @@ app.get("/", (req, res) => {
   });
 });
 
-app.get("/books", (req, res) => {
+app.get("/books", async (req, res) => {
   let books = [];
-  const sql = `SELECT * FROM books`;
-  db.all(sql, [], (err, rows) => {
-    try {
-      if (err) throw err;
-    } catch (err) {
-      console.error("Error fetching books:", err.message);
-      res.status(500).send("Internal Server Error");
-    }
-    books = rows;
-    res.render("books", {
-      showHeader: false,
-      showFooter: true,
-      books: books.length > 0 ? books : null, // Pass null or an empty array if no books found,
-    });
+
+  const query = `SELECT * FROM books`;
+  books = await sql.query(query);
+
+  res.render("books", {
+    showHeader: false,
+    showFooter: true,
+    books: books.length > 0 ? books : null, // Pass null or an empty array if no books found,
   });
 });
-app.post("/books", (req, res) => {
+
+app.post("/books", async (req, res) => {
   let title = req.body.title;
   let author = req.body.author;
 
   if (title && title.trim() !== "" && author && author.trim() !== "") {
-    const insertQuery = `INSERT INTO books (title, author) VALUES (?, ?)`;
-    db.run(insertQuery, [title, author], (err) => {
-      if (err) {
-        console.error("Error adding book:", err.message);
-        return;
-      }
-      console.log(`Book added successfully: ${title} by ${author}`);
-      res.setHeader("HX-Location", "/books");
-      res.send();
-    });
+    const insertQuery = `INSERT INTO books (title, author) VALUES ($1, $2) RETURNING *`;
+    const result = await sql.query(insertQuery, [title, author]);
+
+    console.log(
+      `Book added successfully: ${result[0].title} by ${result[0].author}`
+    );
+    res.setHeader("HX-Location", "/books");
+    res.send();
   }
 });
 
-app.get("/books/:id", (req, res) => {
-  const id = req.params.id;
-  const sql = `SELECT * FROM books WHERE id = ?`;
-  db.get(sql, [id], (err, row) => {
-    if (err) {
-      console.error("Error fetching book:", err.message);
-      return res.status(500).send("Internal Server Error");
-    }
-    if (!row) {
+app.get("/books/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  const selectQuery = `SELECT * FROM books WHERE id = $1`;
+  const [row] = await sql.query(selectQuery, [id]);
+  res.send(formHtmx(row));
+});
+
+app.put("/books/:id/edit", async (req, res) => {
+  const id = parseInt(req.params.id);
+  let title = req.body.title;
+  let author = req.body.author;
+
+  if (title && title.trim() !== "" && author && author.trim() !== "") {
+    const updateQuery = `UPDATE books SET title = $1, author = $2 WHERE id = $3 RETURNING *`;
+    const result = await sql.query(updateQuery, [title, author, id]);
+    console.log(result);
+    if (result.length === 0) {
       return res.status(404).send("Book not found");
     }
-
-    res.send(formHtmx(row));
-  });
-});
-
-app.put("/books/:id/edit", (req, res) => {
-  const id = req.params.id;
-  let title = req.body.title;
-  let author = req.body.author;
-
-  if (title && title.trim() !== "" && author && author.trim() !== "") {
-    const sql = `UPDATE books SET title = ?, author = ? WHERE id = ?`;
-    db.run(sql, [title, author, id], function (err) {
-      if (err) {
-        console.error("Error updating book:", err.message);
-        return res.status(500).send("Internal Server Error");
-      }
-      if (this.changes === 0) {
-        return res.status(404).send("Book not found");
-      }
-      console.log(`Book with id ${id} updated`);
-      res.setHeader("HX-Location", "/books");
-      res.send();
-    });
+    console.log(`Book with id ${id} updated`);
+    res.setHeader("HX-Location", "/books");
+    res.send();
   }
 });
 
-app.delete("/books/:id", (req, res) => {
-  const id = req.params.id;
+app.delete("/books/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
 
-  const sql = `DELETE FROM books WHERE id = ?`;
-  db.run(sql, [id], (err) => {
-    if (err) {
-      console.error("Error deleting book:", err.message);
-      return res.status(500).send("Internal Server Error");
-    }
-    console.log(`Book with id ${id} deleted`);
-
-    res.send();
-  });
+  const deleteQuery = `DELETE FROM books WHERE id = $1`;
+  const result = await sql.query(deleteQuery, [id]);
+  if (result.rowCount === 0) {
+    return res.status(404).send("Book not found");
+  }
+  console.log(`Book with id ${id} deleted`);
+  res.send();
 });
 
 //======================== Search books====================
-
-app.post("/books/search", (req, res) => {
+const searchCache = {};
+app.post("/books/search", async (req, res) => {
   const searchTerm = req.body.search.toLowerCase();
-  const sql = `SELECT * FROM books`;
-  db.all(sql, [], (err, rows) => {
-    if (err) {
-      console.error("Error fetching books:", err.message);
-      return res.status(500).send("Internal Server Error");
-    }
-    const filteredBooks = rows.filter((book) => {
-      return book.title.toLowerCase().includes(searchTerm);
-    });
-    res.render("books", {
+
+  // Check if the result is already in the cache
+  if (searchCache[searchTerm]) {
+    // console.log("Serving from cache:", searchTerm);
+    return res.render("books", {
       showHeader: false,
       showFooter: true,
-      books: filteredBooks.length > 0 ? filteredBooks : null,
+      books:
+        searchCache[searchTerm].length > 0 ? searchCache[searchTerm] : null,
     });
+  }
+  // If not in cache, query the database
+  const searchQuery = `SELECT * FROM books`;
+
+  const result = await sql.query(searchQuery);
+
+  const filteredBooks = result.filter((book) => {
+    return book.title.toLowerCase().includes(searchTerm);
+  });
+  // Store the result in the cache
+  searchCache[searchTerm] = filteredBooks;
+
+  res.render("books", {
+    showHeader: false,
+    showFooter: true,
+    books: filteredBooks.length > 0 ? filteredBooks : null,
   });
 });
 
