@@ -44,9 +44,12 @@ app.get("/", (req, res) => {
 
 app.get("/books", async (req, res) => {
   let books = [];
-
-  const query = `SELECT * FROM books`;
-  books = await sql.query(query);
+try {
+  
+  books = await sql`SELECT * FROM books`;
+} catch (error) {
+  console.error("Error fetching books:", error);
+}
 
   res.render("books", {
     showHeader: false,
@@ -60,22 +63,32 @@ app.post("/books", async (req, res) => {
   let author = req.body.author;
 
   if (title && title.trim() !== "" && author && author.trim() !== "") {
-    const insertQuery = `INSERT INTO books (title, author) VALUES ($1, $2) RETURNING *`;
-    const result = await sql.query(insertQuery, [title, author]);
+    try {
 
-    console.log(
-      `Book added successfully: ${result[0].title} by ${result[0].author}`
-    );
-    res.setHeader("HX-Location", "/books");
-    res.send();
+      const result = await sql`INSERT INTO books (title, author) VALUES (${title}, ${author}) RETURNING *`;
+      
+      console.log(
+        `Book added successfully: ${result[0].title} by ${result[0].author}`
+      );
+      res.setHeader("HX-Location", "/books");
+      res.send();
+    } catch (error) {
+      console.error("Error adding book:", error);
+       res.status(500).send("Error adding book");
+    }
   }
 });
 
 app.get("/books/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  const selectQuery = `SELECT * FROM books WHERE id = $1`;
-  const [row] = await sql.query(selectQuery, [id]);
-  res.send(formHtmx(row));
+  try {
+
+    const [row] = await sql`SELECT * FROM books WHERE id = ${id}`;
+    res.send(formHtmx(row));
+  } catch (error) {
+    console.error("Error fetching book:", error);
+    res.status(500).send("Error fetching book");
+  }
 });
 
 app.put("/books/:id/edit", async (req, res) => {
@@ -84,8 +97,7 @@ app.put("/books/:id/edit", async (req, res) => {
   let author = req.body.author;
 
   if (title && title.trim() !== "" && author && author.trim() !== "") {
-    const updateQuery = `UPDATE books SET title = $1, author = $2 WHERE id = $3 RETURNING *`;
-    const result = await sql.query(updateQuery, [title, author, id]);
+    const result = await sql`UPDATE books SET title = $1, author = $2 WHERE id = $3 RETURNING *`;
     console.log(result);
     if (result.length === 0) {
       return res.status(404).send("Book not found");
@@ -98,14 +110,18 @@ app.put("/books/:id/edit", async (req, res) => {
 
 app.delete("/books/:id", async (req, res) => {
   const id = parseInt(req.params.id);
+try{
 
-  const deleteQuery = `DELETE FROM books WHERE id = $1`;
-  const result = await sql.query(deleteQuery, [id]);
+  const result = await sql`DELETE FROM books WHERE id = $1`;
   if (result.rowCount === 0) {
     return res.status(404).send("Book not found");
   }
   console.log(`Book with id ${id} deleted`);
   res.send();
+}catch (error) {
+  console.error("Error deleting book:", error);
+  res.status(500).send("Error deleting book");
+}
 });
 
 //======================== Search books====================
@@ -124,10 +140,9 @@ app.post("/books/search", async (req, res) => {
     });
   }
   // If not in cache, query the database
-  const searchQuery = `SELECT * FROM books`;
+try{
 
-  const result = await sql.query(searchQuery);
-
+  const result = await sql`SELECT * FROM books`;
   const filteredBooks = result.filter((book) => {
     return book.title.toLowerCase().includes(searchTerm);
   });
@@ -139,6 +154,14 @@ app.post("/books/search", async (req, res) => {
     showFooter: true,
     books: filteredBooks.length > 0 ? filteredBooks : null,
   });
+
+}catch (error) {
+  console.error("Error fetching books:", error);
+  res.status(500).send("Error fetching books");
+}
+
+
+ 
 });
 
 // ===================== server setup  ====================
@@ -146,10 +169,4 @@ app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
 
-// Close the database connection on application shutdown
-process.on("SIGINT", () => {
-  sql.end(() => {
-    console.log("Database connection closed.");
-    process.exit(0);
-  });
-});
+
