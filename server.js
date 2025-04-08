@@ -148,12 +148,8 @@ app.listen(port, () => {
 
 // Close the database connection on application shutdown
 process.on("SIGINT", () => {
-  db.close((err) => {
-    if (err) {
-      console.error("Error closing the database:", err.message);
-    } else {
-      console.log("Database connection closed.");
-    }
-    process.exit(0); // Exit the process
+  sql.end(() => {
+    console.log("Database connection closed.");
+    process.exit(0);
   });
 });
